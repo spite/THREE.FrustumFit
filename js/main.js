@@ -25,8 +25,8 @@ gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
 
 const scene = new Scene();
 const mesh = new Mesh(
-  // new IcosahedronBufferGeometry(1, 5),
-  new TorusKnotBufferGeometry(1, 0.3, 100, 18),
+  new IcosahedronBufferGeometry(1, 5),
+  // new TorusKnotBufferGeometry(1, 0.3, 100, 18),
   new MeshNormalMaterial({ wireframe: true })
 );
 scene.add(mesh);
@@ -60,7 +60,9 @@ function render() {
   mesh.rotation.y += 0.015;
   box.update();
 
-  adjustPerspectiveToBB(cam, mesh.geometry.boundingBox);
+  const b = mesh.geometry.boundingBox.clone();
+  b.applyMatrix4(mesh.matrix);
+  adjustPerspectiveToBB(cam, b);
   cam.lookAt(scene.position);
   helper.update();
 
