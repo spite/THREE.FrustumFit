@@ -8,6 +8,8 @@ import {
   BoxHelper,
   CameraHelper,
   IcosahedronBufferGeometry,
+  BoxBufferGeometry,
+  MeshBasicMaterial,
 } from "../third_party/three.module.js";
 import { OrbitControls } from "../third_party/OrbitControls.js";
 import { adjustPerspectiveToBB } from "./adjust.js";
@@ -25,18 +27,31 @@ gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
 
 const scene = new Scene();
 const mesh = new Mesh(
-  new IcosahedronBufferGeometry(1, 5),
-  // new TorusKnotBufferGeometry(1, 0.3, 100, 18),
+  // new IcosahedronBufferGeometry(1, 5),
+  new TorusKnotBufferGeometry(1, 0.3, 100, 18),
   new MeshNormalMaterial({ wireframe: true })
 );
 scene.add(mesh);
 const box = new BoxHelper(mesh, 0xffff00);
 scene.add(box);
 
+mesh.geometry.computeBoundingBox();
+
 const camera = new PerspectiveCamera(45, 1, 0.1, 100);
 camera.position.set(3, 3, 3);
 camera.lookAt(scene.position);
 const controls = new OrbitControls(camera, renderer.domElement);
+
+const bb = mesh.geometry.boundingBox;
+const box2 = new Mesh(
+  new BoxBufferGeometry(
+    bb.max.x - bb.min.x,
+    bb.max.y - bb.min.y,
+    bb.max.z - bb.min.z
+  ),
+  new MeshBasicMaterial({ wireframe: true })
+);
+scene.add(box2);
 
 const cam = new PerspectiveCamera(75, 1, 0.1, 10);
 cam.position.set(5, 5, 5);
@@ -62,6 +77,9 @@ function render() {
 
   const b = mesh.geometry.boundingBox.clone();
   b.applyMatrix4(mesh.matrix);
+  box2.matrix.copy(mesh.matrix);
+  box2.matrixAutoUpdate = false;
+
   adjustPerspectiveToBB(cam, b);
   cam.lookAt(scene.position);
   helper.update();

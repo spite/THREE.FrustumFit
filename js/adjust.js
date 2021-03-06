@@ -74,7 +74,7 @@ function adjustPerspectiveToBB(camera, bb, keepAspectRatio = true) {
   }
 
   // Update camera properties with new dimensions.
-  camera.fov = maxFov;
+  camera.fov = maxFov / 4;
   camera.near = -maxZ;
   camera.far = -minZ;
   if (!keepAspectRatio) {
