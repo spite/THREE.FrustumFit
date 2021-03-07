@@ -18,7 +18,7 @@ const vertices = [
 ];
 
 /** Adjusts a Perspective Camera to tightly fit a Bounding Box. */
-function adjustPerspectiveToBB(camera, bb, keepAspectRatio = true) {
+function adjustPerspectiveToVertices(camera, vertices, keepAspectRatio = true) {
   // Get a clean camera to calculate projections.
   const cam = new OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 0.1, 2000);
   cam.position.copy(camera.position);
@@ -27,24 +27,6 @@ function adjustPerspectiveToBB(camera, bb, keepAspectRatio = true) {
   cam.updateProjectionMatrix();
 
   m.copy(cam.matrixWorld).invert();
-
-  // Get coordinates of the bounding box.
-  const x1 = bb.min.x;
-  const x2 = bb.max.x;
-  const y1 = bb.min.y;
-  const y2 = bb.max.y;
-  const z1 = bb.min.z;
-  const z2 = bb.max.z;
-
-  // Build all vertices of a box defined by the bounding box.
-  vertices[0].set(x1, y1, z1);
-  vertices[1].set(x1, y1, z2);
-  vertices[2].set(x1, y2, z1);
-  vertices[3].set(x1, y2, z2);
-  vertices[4].set(x2, y1, z1);
-  vertices[5].set(x2, y1, z2);
-  vertices[6].set(x2, y2, z1);
-  vertices[7].set(x2, y2, z2);
 
   let maxX = Number.MIN_SAFE_INTEGER;
   let maxY = Number.MIN_SAFE_INTEGER;
@@ -83,4 +65,26 @@ function adjustPerspectiveToBB(camera, bb, keepAspectRatio = true) {
   camera.updateProjectionMatrix();
 }
 
-export { adjustPerspectiveToBB };
+function adjustPerspectiveToBB(camera, bb, keepAspectRatio = true) {
+  // Get coordinates of the bounding box.
+  const x1 = bb.min.x;
+  const x2 = bb.max.x;
+  const y1 = bb.min.y;
+  const y2 = bb.max.y;
+  const z1 = bb.min.z;
+  const z2 = bb.max.z;
+
+  // Build all vertices of a box defined by the bounding box.
+  vertices[0].set(x1, y1, z1);
+  vertices[1].set(x1, y1, z2);
+  vertices[2].set(x1, y2, z1);
+  vertices[3].set(x1, y2, z2);
+  vertices[4].set(x2, y1, z1);
+  vertices[5].set(x2, y1, z2);
+  vertices[6].set(x2, y2, z1);
+  vertices[7].set(x2, y2, z2);
+
+  adjustPerspectiveToVertices(camera, vertices, keepAspectRatio);
+}
+
+export { adjustPerspectiveToBB, adjustPerspectiveToVertices };
