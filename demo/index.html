@@ -2,7 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<title>frustum-fit</title>
+		<title>THREE.FrustumFit</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/guspira@0.1.1/dist/guspira.min.css">
 		<style>
@@ -30,8 +30,8 @@
 	<body>
 
 		<div id="info">
-			<b>frustum-fit</b>: the frustum of the yellow camera is fitted around the knot on every frame, without moving or turning the camera.
-			The box on the bottom right is what it sees. Drag to look around, and press Space to pause. <a href="shadows.html">For shadows</a> · <a href="https://github.com/spite/frustum-fit">GitHub</a>
+			<b>THREE.FrustumFit</b>: the frustum of the yellow camera is fitted around the knot on every frame, without moving or turning the camera.
+			The box on the bottom right is what it sees. Drag to look around, and press Space to pause. <a href="shadows.html">For shadows</a> · <a href="https://github.com/spite/THREE.FrustumFit">GitHub</a>
 		</div>
 		<div id="inset"></div>
 		<div id="inset-label"></div>
@@ -41,7 +41,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GUI, signal, effect } from 'https://cdn.jsdelivr.net/npm/guspira@0.1.1/dist/guspira.min.js';
-import { fitCameraToObject } from '../src/frustum-fit.js';
+import { fitCameraToObject } from '../src/THREE.FrustumFit.js';
 
 const renderer = new THREE.WebGLRenderer( { antialias: true } );
 renderer.setPixelRatio( Math.min( 2, window.devicePixelRatio ) );
@@ -97,7 +97,7 @@ const params = {
 	far: signal( 0 )
 };
 
-const gui = new GUI( 'frustum-fit', document.getElementById( 'gui-container' ) );
+const gui = new GUI( 'THREE.FrustumFit', document.getElementById( 'gui-container' ) );
 gui.addSegmented( 'camera', params.camera, [ [ 'perspective', 'perspective' ], [ 'orthographic', 'orthographic' ] ] );
 gui.addSelect( 'fit to', params.fit, [ [ 'precise', 'Every vertex' ], [ 'boxes', 'The box of the geometry' ] ] );
 gui.addCheckbox( 'keep aspect', params.keepAspect );

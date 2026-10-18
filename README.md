@@ -1,14 +1,14 @@
-# frustum-fit
+# THREE.FrustumFit
 
 Fits the frustum of a three.js camera tightly around points, a box or an object: the field of view of a perspective camera, the sides of an orthographic one, and the near and far planes. The camera isn't moved or turned: aim it, and the frustum is fitted to what it's looking at.
 
 It's useful for shadow cameras, for render targets that should be filled by an object, and for near and far planes that are as close together as they can be, for the most precision in the depth buffer.
 
-[![npm](https://img.shields.io/npm/v/three-frustum-fit.svg)](https://www.npmjs.com/package/three-frustum-fit)
+[![npm](https://img.shields.io/npm/v/three.frustum-fit.svg)](https://www.npmjs.com/package/three.frustum-fit)
 
 #### Demos ####
-- **[frustum-fit](https://spite.github.io/frustum-fit/demo/)**: a camera goes around a moving knot, and its frustum is fitted to it on every frame. The box on the bottom right is what that camera sees. Switch between a perspective and an orthographic camera, and between fitting every vertex or the box of the geometry. Space pauses
-- **[Shadows](https://spite.github.io/frustum-fit/demo/shadows.html)**: the shadow camera of the sun is fitted around shapes that wander over the ground, side by side with a fixed one that covers everywhere they go. Both shadow maps are the same size, and the fitted one has texels about five times smaller. The insets show the two shadow maps. Space pauses
+- **[THREE.FrustumFit](https://spite.github.io/THREE.FrustumFit/demo/)**: a camera goes around a moving knot, and its frustum is fitted to it on every frame. The box on the bottom right is what that camera sees. Switch between a perspective and an orthographic camera, and between fitting every vertex or the box of the geometry. Space pauses
+- **[Shadows](https://spite.github.io/THREE.FrustumFit/demo/shadows.html)**: the shadow camera of the sun is fitted around shapes that wander over the ground, side by side with a fixed one that covers everywhere they go. Both shadow maps are the same size, and the fitted one has texels about five times smaller. The insets show the two shadow maps. Space pauses
 
 #### 2026 update ####
 **Disclaimer:** this is from 2021, and was never published until now. three.js still has nothing that does this: `Box3.setFromObject` gives a box in world space, and libraries like camera-controls move the camera to frame something, while this changes the frustum of a camera that stays where it is
@@ -31,11 +31,11 @@ What changed from the 2021 code:
 Install it alongside three.js:
 
 ```
-npm i three three-frustum-fit
+npm i three three.frustum-fit
 ```
 
 ```js
-import { fitCameraToObject, fitCameraToBox, fitCamera } from 'three-frustum-fit';
+import { fitCameraToObject, fitCameraToBox, fitCamera } from 'three.frustum-fit';
 ```
 
 It's a plain ES module, so it also works without a bundler as long as an import map resolves `three` (see [demo/index.html](demo/index.html)).

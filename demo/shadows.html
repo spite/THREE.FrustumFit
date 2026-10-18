@@ -2,7 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<title>frustum-fit: shadows</title>
+		<title>THREE.FrustumFit: shadows</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/guspira@0.1.1/dist/guspira.min.css">
 		<style>
@@ -36,9 +36,9 @@
 	<body>
 
 		<div id="info">
-			<b>frustum-fit</b>, for shadows: the shadow camera of the sun is fitted around the shapes on every frame, next to a fixed one that covers everywhere they go.
+			<b>THREE.FrustumFit</b>, for shadows: the shadow camera of the sun is fitted around the shapes on every frame, next to a fixed one that covers everywhere they go.
 			Both shadow maps are the same size: the fitted one spends all of it on the shapes. Drag to look around, and press Space to pause.
-			<a href="./">The other demo</a> · <a href="https://github.com/spite/frustum-fit">GitHub</a>
+			<a href="./">The other demo</a> · <a href="https://github.com/spite/THREE.FrustumFit">GitHub</a>
 		</div>
 		<div id="divider"><span>fitted</span><span>fixed</span></div>
 		<div class="inset" id="fitted-inset"><span>shadow map, fitted</span></div>
@@ -49,7 +49,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GUI, signal, effect } from 'https://cdn.jsdelivr.net/npm/guspira@0.1.1/dist/guspira.min.js';
-import { fitCameraToObject } from '../src/frustum-fit.js';
+import { fitCameraToObject } from '../src/THREE.FrustumFit.js';
 
 const renderer = new THREE.WebGLRenderer( { antialias: true } );
 renderer.setPixelRatio( Math.min( 2, window.devicePixelRatio ) );

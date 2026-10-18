@@ -1,15 +1,15 @@
 {
-  "name": "three-frustum-fit",
+  "name": "three.frustum-fit",
   "version": "1.0.0",
   "description": "Fits the frustum of a three.js camera tightly around points, a box or an object: field of view, sides, near and far",
   "type": "module",
-  "main": "src/frustum-fit.js",
-  "module": "src/frustum-fit.js",
-  "types": "src/frustum-fit.d.ts",
+  "main": "src/THREE.FrustumFit.js",
+  "module": "src/THREE.FrustumFit.js",
+  "types": "src/THREE.FrustumFit.d.ts",
   "exports": {
     ".": {
-      "types": "./src/frustum-fit.d.ts",
-      "default": "./src/frustum-fit.js"
+      "types": "./src/THREE.FrustumFit.d.ts",
+      "default": "./src/THREE.FrustumFit.js"
     }
   },
   "files": [
@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/spite/frustum-fit.git"
+    "url": "git+https://github.com/spite/THREE.FrustumFit.git"
   },
   "keywords": [
     "three",
@@ -39,5 +39,5 @@
   ],
   "author": "Jaume Sanchez <the.spite@gmail.com> (https://www.clicktorelease.com)",
   "license": "MIT",
-  "homepage": "https://spite.github.io/frustum-fit/"
+  "homepage": "https://spite.github.io/THREE.FrustumFit/"
 }

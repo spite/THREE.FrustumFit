@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PerspectiveCamera, OrthographicCamera, Vector3, Box3, Matrix4, Mesh, Group, TorusKnotGeometry, BoxGeometry, PlaneGeometry, InstancedMesh } from 'three';
-import { fitPerspectiveCamera, fitOrthographicCamera, fitCameraToBox, fitCameraToObject, fitCamera } from '../src/frustum-fit.js';
+import { fitPerspectiveCamera, fitOrthographicCamera, fitCameraToBox, fitCameraToObject, fitCamera } from '../src/THREE.FrustumFit.js';
 
 // a seeded random, so a failure can be run again
 let seed = 1;
