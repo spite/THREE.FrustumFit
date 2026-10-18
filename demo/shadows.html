@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>frustum-fit: shadows</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/guspira@0.1.1/dist/guspira.min.css">
+		<style>
+			* { box-sizing: border-box; margin: 0; padding: 0; }
+			html, body { height: 100%; }
+			body { background: #1a1d22; color: #ccc; font: 13px system-ui, sans-serif; overflow: hidden; }
+			canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+			#info { position: absolute; left: 12px; top: 10px; line-height: 1.5; max-width: 420px; pointer-events: none; text-shadow: 0 1px 2px #000; }
+			#info b { color: #fff; }
+			#info a { color: #8ab4f8; pointer-events: auto; }
+			.inset { position: absolute; bottom: 30px; border: 1px solid; pointer-events: none; }
+			.inset span { position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; text-align: center; color: #fff; font-size: 12px; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+			#fitted-inset { border-color: #ffcc00; }
+			#fixed-inset { border-color: #9aa0a6; }
+			#divider { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba( 255, 255, 255, .5 ); pointer-events: none; }
+			#divider span { position: absolute; top: 12px; padding: 2px 8px; border-radius: 3px; background: rgba( 0, 0, 0, .55 ); color: #fff; font-size: 12px; white-space: nowrap; }
+			#divider span:first-child { right: 8px; }
+			#divider span:last-child { left: 8px; }
+			#gui-container { position: absolute; right: 0; top: 0; width: 280px; max-height: 100%; overflow: auto; }
+			@media ( max-width: 700px ) { #info { display: none; } }
+		</style>
+		<script type="importmap">
+		{
+			"imports": {
+				"three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+				"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+			}
+		}
+		</script>
+	</head>
+	<body>
+
+		<div id="info">
+			<b>frustum-fit</b>, for shadows: the shadow camera of the sun is fitted around the shapes on every frame, next to a fixed one that covers everywhere they go.
+			Both shadow maps are the same size: the fitted one spends all of it on the shapes. Drag to look around, and press Space to pause.
+			<a href="./">The other demo</a> · <a href="https://github.com/spite/frustum-fit">GitHub</a>
+		</div>
+		<div id="divider"><span>fitted</span><span>fixed</span></div>
+		<div class="inset" id="fitted-inset"><span>shadow map, fitted</span></div>
+		<div class="inset" id="fixed-inset"><span>shadow map, fixed</span></div>
+		<div id="gui-container"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GUI, signal, effect } from 'https://cdn.jsdelivr.net/npm/guspira@0.1.1/dist/guspira.min.js';
+import { fitCameraToObject } from '../src/frustum-fit.js';
+
+const renderer = new THREE.WebGLRenderer( { antialias: true } );
+renderer.setPixelRatio( Math.min( 2, window.devicePixelRatio ) );
+renderer.setScissorTest( true );
+renderer.shadowMap.enabled = true;
+document.body.appendChild( renderer.domElement );
+
+const background = new THREE.Color( 0x1a1d22 );
+const scene = new THREE.Scene();
+scene.background = background;
+scene.fog = new THREE.Fog( background, 25, 45 );
+
+const view = new THREE.PerspectiveCamera( 45, 1, .1, 200 );
+const controls = new OrbitControls( view, renderer.domElement );
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * .48;
+
+scene.add( new THREE.HemisphereLight( 0xc8d8ff, 0x403830, 1.2 ) );
+
+const sun = new THREE.DirectionalLight( 0xfff2dd, 2.8 );
+sun.castShadow = true;
+scene.add( sun, sun.target );
+
+const ground = new THREE.Mesh( new THREE.PlaneGeometry( 40, 40 ).rotateX( - Math.PI / 2 ), new THREE.MeshStandardMaterial( { color: 0xd8d2c8, roughness: .9 } ) );
+ground.receiveShadow = true;
+scene.add( ground );
+
+const casters = new THREE.Group();
+scene.add( casters );
+
+function shape( geometry, color, x, y, z ) {
+
+	const mesh = new THREE.Mesh( geometry, new THREE.MeshStandardMaterial( { color, roughness: .5 } ) );
+	mesh.position.set( x, y, z );
+	mesh.castShadow = mesh.receiveShadow = true;
+	casters.add( mesh );
+	return mesh;
+
+}
+
+const knot = shape( new THREE.TorusKnotGeometry( .8, .25, 160, 20 ), 0xff7a59, 0, 2.3, 0 );
+
+for ( const [ angle, height ] of [ [ 30, 2.2 ], [ 150, 1.4 ], [ 270, 1.8 ] ] ) {
+
+	const a = THREE.MathUtils.degToRad( angle );
+	shape( new THREE.BoxGeometry( .5, height, .5 ).translate( 0, height / 2, 0 ), 0x6c8ebf, Math.cos( a ) * 2.3, 0, Math.sin( a ) * 2.3 );
+
+}
+
+const balls = [ 90, 210, 330 ].map( angle => shape( new THREE.SphereGeometry( .4, 32, 16 ), 0x4fb3a5, Math.cos( THREE.MathUtils.degToRad( angle ) ) * 1.7, .4, Math.sin( THREE.MathUtils.degToRad( angle ) ) * 1.7 ) );
+
+// a fence of thin bars, where the size of a texel shows the most
+const bar = new THREE.BoxGeometry( .04, 1.4, .04 ).translate( 0, .7, 0 );
+for ( let i = 0; i < 13; i ++ ) shape( bar, 0xe8e8e8, - .9 + i * .15, 0, 2.9 );
+shape( new THREE.BoxGeometry( 1.9, .05, .05 ), 0xe8e8e8, 0, 1.38, 2.9 );
+
+// the shadow cameras: the sun's own gets the projection of one of them before each render
+const SIZE = 14;
+const shadowCameras = {
+	fitted: new THREE.OrthographicCamera(),
+	fixed: new THREE.OrthographicCamera( - SIZE, SIZE, SIZE, - SIZE, .5, 60 )
+};
+
+// the box of each, in the space of the camera: an orthographic camera has no point it looks from, which CameraHelper would draw
+function frustumBox( color ) {
+
+	const holder = new THREE.Group();
+	holder.matrixAutoUpdate = false;
+	holder.add( new THREE.Box3Helper( new THREE.Box3(), color ) );
+	scene.add( holder );
+	return holder;
+
+}
+
+const helpers = { fitted: frustumBox( 0xffcc00 ), fixed: frustumBox( 0x9aa0a6 ) };
+const corner = new THREE.Vector3();
+
+function showFrustum( holder, camera ) {
+
+	holder.matrix.copy( camera.matrixWorld );
+	const box = holder.children[ 0 ].box.makeEmpty();
+	for ( let i = 0; i < 8; i ++ ) box.expandByPoint( corner.set( i & 1 ? 1 : - 1, i & 2 ? 1 : - 1, i & 4 ? 1 : - 1 ).applyMatrix4( camera.projectionMatrixInverse ) );
+
+}
+
+const groundPlane = new THREE.Plane( new THREE.Vector3( 0, 1, 0 ), 0 );
+const plane = new THREE.Plane();
+
+// far down to where the edges of the frustum meet the ground, as three.js leaves lit whatever is past far
+function reachGround( camera ) {
+
+	const { normal, constant } = plane.copy( groundPlane ).applyMatrix4( camera.matrixWorldInverse );
+	if ( normal.z < 1e-6 ) return;
+
+	for ( const x of [ camera.left, camera.right ] ) for ( const y of [ camera.bottom, camera.top ] ) camera.far = Math.max( camera.far, ( normal.x * x + normal.y * y + constant ) / normal.z );
+	camera.updateProjectionMatrix();
+
+}
+
+const params = {
+	show: signal( 'split' ),
+	fit: signal( 'precise' ),
+	margin: signal( .05 ),
+	mapSize: signal( '1024' ),
+	type: signal( 'soft' ),
+	helpers: signal( true ),
+	wander: signal( true ),
+	sunMoves: signal( true ),
+	follow: signal( true ),
+	playing: signal( true ),
+	fittedTexel: signal( 0 ),
+	fixedTexel: signal( 0 )
+};
+
+const gui = new GUI( 'Shadows', document.getElementById( 'gui-container' ) );
+gui.addSegmented( 'shadow camera', params.show, [ [ 'fitted', 'fitted' ], [ 'split', 'both' ], [ 'fixed', 'fixed' ] ] );
+gui.addSelect( 'fit to', params.fit, [ [ 'precise', 'Every vertex' ], [ 'boxes', 'The boxes of the geometries' ] ] );
+gui.addSlider( 'margin', params.margin, 0, .3, .01 );
+gui.addSelect( 'shadow map', params.mapSize, [ [ '512', '512 × 512' ], [ '1024', '1024 × 1024' ], [ '2048', '2048 × 2048' ] ] );
+gui.addSegmented( 'shadows', params.type, [ [ 'hard', 'hard' ], [ 'soft', 'soft' ] ] );
+gui.addCheckbox( 'show the shadow cameras', params.helpers );
+gui.addSeparator();
+gui.addCheckbox( 'move the shapes', params.wander );
+gui.addCheckbox( 'move the sun', params.sunMoves );
+gui.addCheckbox( 'follow the shapes', params.follow );
+gui.addCheckbox( 'playing', params.playing, { title: 'Space pauses and plays' } );
+gui.addSeparator();
+gui.addMonitor( 'texel, fitted', params.fittedTexel, { format: v => ( v * 100 ).toFixed( 2 ) + ' cm' } );
+gui.addMonitor( 'texel, fixed', params.fixedTexel, { format: v => ( v * 100 ).toFixed( 2 ) + ' cm' } );
+
+effect( () => sun.shadow.mapSize.setScalar( Number( params.mapSize() ) ) );
+effect( () => { renderer.shadowMap.type = params.type() === 'hard' ? THREE.BasicShadowMap : THREE.PCFShadowMap; } );
+
+// Space pauses and plays, unless it's for a control that has the focus
+window.addEventListener( 'keydown', e => {
+
+	const origin = e.composedPath()[ 0 ];
+	if ( e.code !== 'Space' || e.repeat || origin.closest?.( 'input, select, button, textarea' ) ) return;
+	e.preventDefault();
+	params.playing.set( ! params.playing() );
+
+} );
+
+// the size of a texel of the shadow map, in the world
+const texel = camera => Math.max( camera.right - camera.left, camera.top - camera.bottom ) / camera.zoom / sun.shadow.mapSize.x;
+
+// gives the sun's shadow camera the projection of one of them
+function use( name ) {
+
+	const from = shadowCameras[ name ], camera = sun.shadow.camera;
+	for ( const key of [ 'left', 'right', 'top', 'bottom', 'near', 'far' ] ) camera[ key ] = from[ key ];
+	camera.updateProjectionMatrix();
+
+	// the normal offset grows with the texels, so neither shows acne
+	sun.shadow.normalBias = texel( from ) * 1.5;
+
+}
+
+function resize() {
+
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	view.aspect = window.innerWidth / window.innerHeight;
+	view.updateProjectionMatrix();
+
+}
+
+window.addEventListener( 'resize', resize );
+resize();
+
+const timer = new THREE.Timer();
+timer.connect( document );
+let time = 0, sunAngle = .8;
+
+const followed = new THREE.Vector3();
+const moved = new THREE.Vector3();
+const depthMaterial = new THREE.MeshDepthMaterial();
+
+function wander() {
+
+	knot.rotation.set( time * .7, time, time * .3 );
+	balls.forEach( ( ball, i ) => { ball.position.y = .4 + Math.abs( Math.sin( time * 2 + i * 1.7 ) ) * 1.2; } );
+	casters.position.set( Math.sin( time * .23 ) * 7, 0, Math.sin( time * .31 + 1 ) * 5 );
+	casters.rotation.y = time * .1;
+
+}
+
+wander();
+followed.copy( casters.position );
+view.position.copy( casters.position ).add( new THREE.Vector3( 4, 3.6, 5.8 ) );
+controls.target.copy( casters.position ).add( new THREE.Vector3( 0, 1, 0 ) );
+
+function render() {
+
+	requestAnimationFrame( render );
+
+	timer.update();
+	const delta = Math.min( .1, timer.getDelta() );
+	if ( params.playing() && params.wander() ) time += delta;
+	if ( params.playing() && params.sunMoves() ) sunAngle += delta * .1;
+
+	wander();
+	sun.position.setFromSphericalCoords( 20, THREE.MathUtils.degToRad( 42 ), sunAngle );
+
+	// the view goes where the shapes go
+	if ( params.follow() ) {
+
+		moved.subVectors( casters.position, followed );
+		view.position.add( moved );
+		controls.target.add( moved );
+
+	}
+
+	followed.copy( casters.position );
+	controls.update();
+
+	// both are aimed as three.js aims the sun's shadow camera, from the light to its target
+	for ( const camera of Object.values( shadowCameras ) ) {
+
+		camera.position.copy( sun.position );
+		camera.lookAt( sun.target.position );
+		camera.updateMatrixWorld();
+
+	}
+
+	// the sides, near and far around what casts the shadows, and far on down to the ground under it
+	fitCameraToObject( shadowCameras.fitted, casters, { precise: params.fit() === 'precise', margin: params.margin() } );
+	reachGround( shadowCameras.fitted );
+
+	showFrustum( helpers.fitted, shadowCameras.fitted );
+	showFrustum( helpers.fixed, shadowCameras.fixed );
+	params.fittedTexel.set( texel( shadowCameras.fitted ) );
+	params.fixedTexel.set( texel( shadowCameras.fixed ) );
+
+	const w = window.innerWidth, h = window.innerHeight;
+	const show = params.show();
+	const halves = show === 'split' ? [ [ 'fitted', 0, w / 2 ], [ 'fixed', w / 2, w / 2 ] ] : [ [ show, 0, w ] ];
+
+	for ( const [ name, x, width ] of halves ) {
+
+		use( name );
+		helpers.fitted.visible = params.helpers() && name === 'fitted';
+		helpers.fixed.visible = params.helpers() && name === 'fixed';
+		renderer.setViewport( 0, 0, w, h );
+		renderer.setScissor( x, 0, width, h );
+		renderer.render( scene, view );
+
+	}
+
+	// the shadow maps, as the light sees them: near is white
+	const size = Math.round( Math.min( h * .25, w * .2 ) );
+	const insets = show === 'split' ? [ [ 'fitted', 12 ], [ 'fixed', w - size - 12 ] ] : [ [ show, w - size - 12 ] ];
+
+	helpers.fitted.visible = helpers.fixed.visible = false;
+	scene.overrideMaterial = depthMaterial;
+	scene.background = null;
+	renderer.shadowMap.autoUpdate = false;
+
+	for ( const [ name, x ] of insets ) {
+
+		renderer.setViewport( x, 31, size, size );
+		renderer.setScissor( x, 31, size, size );
+		renderer.render( scene, shadowCameras[ name ] );
+
+	}
+
+	renderer.shadowMap.autoUpdate = true;
+	scene.background = background;
+	scene.overrideMaterial = null;
+
+	for ( const name of [ 'fitted', 'fixed' ] ) {
+
+		const inset = insets.find( i => i[ 0 ] === name );
+		const element = document.getElementById( `${ name }-inset` );
+		element.hidden = inset === undefined;
+		if ( inset ) Object.assign( element.style, { left: inset[ 1 ] - 1 + 'px', width: size + 2 + 'px', height: size + 2 + 'px' } );
+
+	}
+
+	document.getElementById( 'divider' ).hidden = show !== 'split';
+
+}
+
+render();
+</script>
+
+	</body>
+</html>

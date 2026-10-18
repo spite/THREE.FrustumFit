@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>frustum-fit</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/guspira@0.1.1/dist/guspira.min.css">
+		<style>
+			* { box-sizing: border-box; margin: 0; padding: 0; }
+			html, body { height: 100%; }
+			body { background: #111; color: #ccc; font: 13px system-ui, sans-serif; overflow: hidden; }
+			canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+			#info { position: absolute; left: 12px; top: 10px; line-height: 1.5; max-width: 420px; pointer-events: none; text-shadow: 0 1px 2px #000; }
+			#info b { color: #fff; }
+			#info a { color: #8ab4f8; pointer-events: auto; }
+			#inset { position: absolute; border: 1px solid #ffcc00; pointer-events: none; }
+			#inset-label { position: absolute; right: 12px; bottom: 12px; color: #fff; font-size: 12px; text-shadow: 0 1px 2px #000; pointer-events: none; }
+			#gui-container { position: absolute; right: 0; top: 0; width: 280px; max-height: 100%; overflow: auto; }
+			@media ( max-width: 700px ) { #info { display: none; } }
+		</style>
+		<script type="importmap">
+		{
+			"imports": {
+				"three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+				"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+			}
+		}
+		</script>
+	</head>
+	<body>
+
+		<div id="info">
+			<b>frustum-fit</b>: the frustum of the yellow camera is fitted around the knot on every frame, without moving or turning the camera.
+			The box on the bottom right is what it sees. Drag to look around, and press Space to pause. <a href="shadows.html">For shadows</a> · <a href="https://github.com/spite/frustum-fit">GitHub</a>
+		</div>
+		<div id="inset"></div>
+		<div id="inset-label"></div>
+		<div id="gui-container"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GUI, signal, effect } from 'https://cdn.jsdelivr.net/npm/guspira@0.1.1/dist/guspira.min.js';
+import { fitCameraToObject } from '../src/frustum-fit.js';
+
+const renderer = new THREE.WebGLRenderer( { antialias: true } );
+renderer.setPixelRatio( Math.min( 2, window.devicePixelRatio ) );
+renderer.setScissorTest( true );
+document.body.appendChild( renderer.domElement );
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color( 0x111111 );
+
+// the camera to look at everything from
+const view = new THREE.PerspectiveCamera( 45, 1, .1, 200 );
+view.position.set( 9, 6, 12 );
+const controls = new OrbitControls( view, renderer.domElement );
+controls.enableDamping = true;
+
+scene.add( new THREE.GridHelper( 20, 20, 0x333333, 0x222222 ).translateY( - 3 ) );
+
+// what is fitted
+const target = new THREE.Group();
+scene.add( target );
+
+const knot = new THREE.Mesh( new THREE.TorusKnotGeometry( 1.2, .35, 160, 20, 2, 3 ), new THREE.MeshNormalMaterial() );
+const box = new THREE.Box3Helper( new THREE.Box3(), 0x555555 );
+target.add( knot );
+scene.add( box );
+
+// the cameras that are fitted, and their frustums
+const aspect = 16 / 9;
+const cameras = {
+	perspective: new THREE.PerspectiveCamera( 50, aspect, .1, 100 ),
+	orthographic: new THREE.OrthographicCamera( - aspect, aspect, 1, - 1, .1, 100 )
+};
+const helpers = {};
+for ( const [ name, camera ] of Object.entries( cameras ) ) {
+
+	helpers[ name ] = new THREE.CameraHelper( camera );
+	helpers[ name ].setColors( new THREE.Color( 0xffcc00 ), new THREE.Color( 0xffcc00 ), new THREE.Color( 0xff6600 ), new THREE.Color( 0xffcc00 ), new THREE.Color( 0x888888 ) );
+	scene.add( helpers[ name ] );
+
+}
+
+const params = {
+	camera: signal( 'perspective' ),
+	fit: signal( 'precise' ),
+	keepAspect: signal( true ),
+	margin: signal( 0 ),
+	fitDepth: signal( true ),
+	spin: signal( true ),
+	orbit: signal( true ),
+	playing: signal( true ),
+	fov: signal( 0 ),
+	near: signal( 0 ),
+	far: signal( 0 )
+};
+
+const gui = new GUI( 'frustum-fit', document.getElementById( 'gui-container' ) );
+gui.addSegmented( 'camera', params.camera, [ [ 'perspective', 'perspective' ], [ 'orthographic', 'orthographic' ] ] );
+gui.addSelect( 'fit to', params.fit, [ [ 'precise', 'Every vertex' ], [ 'boxes', 'The box of the geometry' ] ] );
+gui.addCheckbox( 'keep aspect', params.keepAspect );
+gui.addSlider( 'margin', params.margin, 0, .5, .01 );
+gui.addCheckbox( 'fit near and far', params.fitDepth );
+gui.addSeparator();
+gui.addCheckbox( 'spin the knot', params.spin );
+gui.addCheckbox( 'move the camera', params.orbit );
+gui.addCheckbox( 'playing', params.playing, { title: 'Space pauses and plays' } );
+gui.addSeparator();
+gui.addMonitor( 'field of view', params.fov, { format: v => v.toFixed( 2 ) + '°' } );
+gui.addMonitor( 'near', params.near, { format: v => v.toFixed( 3 ) } );
+gui.addMonitor( 'far', params.far, { format: v => v.toFixed( 3 ) } );
+
+effect( () => { for ( const name in helpers ) helpers[ name ].visible = name === params.camera(); } );
+
+// Space pauses and plays, unless it's for a control that has the focus
+window.addEventListener( 'keydown', e => {
+
+	const origin = e.composedPath()[ 0 ];
+	if ( e.code !== 'Space' || e.repeat || origin.closest?.( 'input, select, button, textarea' ) ) return;
+	e.preventDefault();
+	params.playing.set( ! params.playing() );
+
+} );
+
+function resize() {
+
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	view.aspect = window.innerWidth / window.innerHeight;
+	view.updateProjectionMatrix();
+
+}
+
+window.addEventListener( 'resize', resize );
+resize();
+
+const timer = new THREE.Timer();
+let t = 0, spin = 0;
+
+function render() {
+
+	requestAnimationFrame( render );
+
+	timer.update();
+	const delta = Math.min( .1, timer.getDelta() );
+	if ( params.playing() && params.orbit() ) t += delta * .3;
+	if ( params.playing() && params.spin() ) spin += delta * .5;
+
+	knot.rotation.set( spin * .7, spin, spin * .3 );
+	target.position.set( Math.sin( spin * .5 ) * 1.5, Math.cos( spin * .4 ) * .8, 0 );
+
+	const camera = cameras[ params.camera() ];
+	if ( params.camera() === 'orthographic' ) {
+
+		// a box of the right shape, for keep aspect to keep
+		camera.left = - aspect; camera.right = aspect; camera.top = 1; camera.bottom = - 1;
+
+	} else {
+
+		camera.aspect = aspect;
+
+	}
+
+	// the camera goes around, and looks at the centre: the fit doesn't turn it
+	camera.position.set( Math.cos( t ) * 7, 2 + Math.sin( t * .7 ) * 2, Math.sin( t ) * 7 );
+	camera.lookAt( 0, 0, 0 );
+
+	fitCameraToObject( camera, target, {
+		precise: params.fit() === 'precise',
+		keepAspect: params.keepAspect(),
+		margin: params.margin(),
+		fitDepth: params.fitDepth()
+	} );
+
+	helpers[ params.camera() ].update();
+	knot.geometry.boundingBox || knot.geometry.computeBoundingBox();
+	box.box.copy( knot.geometry.boundingBox ).applyMatrix4( knot.matrixWorld );
+
+	params.fov.set( camera.isPerspectiveCamera ? camera.fov : 0 );
+	params.near.set( camera.near );
+	params.far.set( camera.far );
+
+	controls.update();
+
+	const w = window.innerWidth, h = window.innerHeight;
+
+	// everything, with the frustum
+	helpers[ params.camera() ].visible = true;
+	renderer.setViewport( 0, 0, w, h );
+	renderer.setScissor( 0, 0, w, h );
+	renderer.render( scene, view );
+
+	// what the fitted camera sees, with the shape it has now
+	const insetAspect = camera.isPerspectiveCamera ? camera.aspect : ( camera.right - camera.left ) / ( camera.top - camera.bottom );
+	const ih = Math.min( h * .3, w * .3 / insetAspect ), iw = ih * insetAspect;
+	helpers[ params.camera() ].visible = false;
+	box.visible = false;
+	renderer.setViewport( w - iw - 12, 36, iw, ih );
+	renderer.setScissor( w - iw - 12, 36, iw, ih );
+	renderer.render( scene, camera );
+	box.visible = true;
+
+	Object.assign( document.getElementById( 'inset' ).style, { right: '11px', bottom: '35px', width: iw + 2 + 'px', height: ih + 2 + 'px' } );
+	document.getElementById( 'inset-label' ).textContent = `What the ${ params.camera() } camera sees`;
+
+}
+
+render();
+</script>
+
+	</body>
+</html>
